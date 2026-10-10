@@ -1,0 +1,30 @@
+# Rust build artifacts
+target/
+dist/
+**/*.rs.bk
+
+# Executables & Dynamic Libraries
+*.exe
+*.dll
+*.so
+*.dylib
+*.pdb
+
+# Logs & Runtime Dumps
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Editor & IDE Directories
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
