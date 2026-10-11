@@ -1,0 +1,22 @@
+[package]
+name = "rvconnect"
+version = "1.0.0"
+edition = "2021"
+description = "Modern, high-performance remote desktop client tailored for Raspberry Pi and standard RFB/VNC servers"
+authors = ["RVConnect Contributors"]
+license = "MIT"
+readme = "README.md"
+keywords = ["vnc", "raspberry-pi", "remote-desktop", "rfb", "tauri"]
+
+[dependencies]
+arboard = "3.4"
+byteorder = "1.5.0"
+des = "0.9.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+ssh2 = "0.9.6"
+tauri = { version = "1.8", features = ["api-all"] }
+tokio = { version = "1.54.1", features = ["full"] }
+
+[build-dependencies]
+tauri-build = "1.5"
