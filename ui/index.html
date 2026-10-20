@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RVConnect Viewer</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Window Titlebar -->
+  <header class="titlebar">
+    <div class="titlebar-drag" data-tauri-drag-region ondblclick="window.api && window.api.windowControl('maximize')">
+      <div class="app-icon" data-tauri-drag-region>
+        <svg viewBox="0 0 32 32" width="18" height="18" data-tauri-drag-region fill="none">
+          <rect width="32" height="32" rx="7" fill="#0E131F" stroke="#3B82F6" stroke-width="1.5"/>
+          <path d="M7 11V8H10M25 11V8H22M7 21V24H10M25 21V24H22" stroke="#00F0FF" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M17 6L10 16H16L15 26L22 16H16L17 6Z" fill="url(#boltGrad)"/>
+          <defs>
+            <linearGradient id="boltGrad" x1="10" y1="6" x2="22" y2="26" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#00F0FF"/>
+              <stop offset="1" stop-color="#10B981"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <span class="app-title" data-tauri-drag-region>RVConnect Viewer</span>
+    </div>
+    <div class="window-controls">
+      <button class="win-btn" id="btn-minimize" title="Minimize">
+        <svg width="10" height="1" viewBox="0 0 10 1"><path d="M0 0h10v1H0z" fill="currentColor"/></svg>
+      </button>
+      <button class="win-btn" id="btn-maximize" title="Maximize">
+        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 0v10h10V0H0zm9 9H1V1h8v8z" fill="currentColor"/></svg>
+      </button>
+      <button class="win-btn close-btn" id="btn-close" title="Close">
+        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 0L0 1l4 4-4 4 1 1 4-4 4 4 1-1-4-4 4-4-1-1-4 4-4-4z" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- App Body Layout -->
+  <div class="app-layout" id="main-app-layout">
+    <!-- Left Navigation Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <nav class="sidebar-nav">
+        <button class="nav-item active" id="nav-home" data-view="home">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+          <span class="nav-label">Home</span>
+        </button>
+
+        <button class="nav-item" id="nav-devices" data-view="devices">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+          <span class="nav-label">Devices</span>
+          <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+
+        <button class="nav-item" id="nav-settings" data-view="settings">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span class="nav-label">Settings</span>
+          <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+      </nav>
+
+      <!-- Sidebar Collapse Toggle Button -->
+      <button class="sidebar-toggle" id="btn-toggle-sidebar" title="Collapse sidebar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Search & Address Bar (Real-Time Filter & Connect) -->
+      <div class="topbar">
+        <div class="search-container">
+          <input type="text" class="search-input" id="search-address" placeholder="Search devices or enter IP / hostname..." autocomplete="off" spellcheck="false">
+          <button class="search-btn" id="btn-search-connect" title="Search / Connect">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Views Container -->
+      <div class="view-viewport">
+        <!-- View: HOME (RVConnect Hub) -->
+        <section class="view active" id="view-home">
+          <div class="welcome-header">
+            <h1 class="welcome-title">Welcome, <span id="user-display-name">User</span></h1>
+            <p class="welcome-subtitle">Start a connection or set up a device for remote access.</p>
+          </div>
+
+          <!-- Main Action Card -->
+          <div class="card access-card">
+            <div class="card-header">
+              <div class="card-icon-box">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8BA8FF" stroke-width="2">
+                  <rect x="2" y="3" width="14" height="10" rx="1.5"></rect>
+                  <rect x="8" y="9" width="14" height="10" rx="1.5"></rect>
+                </svg>
+              </div>
+              <div class="card-title-group">
+                <h2 class="card-title">Access other devices</h2>
+                <p class="card-subtitle">Make outbound connections</p>
+              </div>
+            </div>
+
+            <!-- Unattended Access Section -->
+            <div class="card-section">
+              <span class="section-badge">UNATTENDED ACCESS</span>
+              <p class="section-desc">Add devices to your local list for secure any time access, even when they're unattended.</p>
+              <button class="btn btn-primary" id="btn-add-device">
+                <span class="btn-plus">+</span> Add a device
+              </button>
+            </div>
+
+            <!-- One-Time / Direct Access Section -->
+            <div class="card-section">
+              <span class="section-badge">DIRECT LAN CONNECTION</span>
+              <p class="section-desc">Connect directly to a computer running VNC / RFB Server by entering its IP address or hostname.</p>
+              <div class="direct-input-group">
+                <input type="text" class="direct-input" id="direct-address-input" placeholder="e.g. 10.32.139.180 or raspberrypi" autocomplete="off" spellcheck="false" value="10.32.139.180">
+                <button class="direct-action-btn" id="btn-direct-connect" title="Connect">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent & Saved Connections Section -->
+          <div class="home-recents-section">
+            <div class="section-heading-row">
+              <h3 class="section-title">Recent Connections</h3>
+              <span class="section-hint" id="recent-count-hint">0 saved</span>
+            </div>
+            <div class="recents-grid" id="home-recents-grid">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </section>
+
+        <!-- View: DEVICES -->
+        <section class="view" id="view-devices">
+          <div class="view-header-row">
+            <div>
+              <h1 class="welcome-title">Devices</h1>
+              <p class="welcome-subtitle">Manage saved connections and discover VNC devices on your local network</p>
+            </div>
+            <button class="btn btn-primary-small" id="btn-devices-add">
+              <span class="btn-plus">+</span> Add Device
+            </button>
+          </div>
+
+          <!-- Saved Devices Section -->
+          <div class="device-group-section">
+            <div class="group-header">
+              <h2 class="group-title">Saved Devices</h2>
+              <span class="group-badge" id="saved-devices-count">0 devices</span>
+            </div>
+            <div class="devices-grid" id="saved-devices-grid">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Discovered LAN Devices Section -->
+          <div class="device-group-section" style="margin-top: 32px;">
+            <div class="group-header">
+              <div>
+                <h2 class="group-title">Discovered on LAN (mDNS)</h2>
+                <p class="group-desc">Computers broadcasting RFB / VNC on your local subnet</p>
+              </div>
+              <button class="btn btn-secondary" id="btn-refresh-devices">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                Scan Local Network
+              </button>
+            </div>
+            <div class="devices-grid" id="discovered-devices-grid">
+              <!-- Discovered device cards dynamically inserted here -->
+            </div>
+          </div>
+        </section>
+
+        <!-- View: SETTINGS -->
+        <section class="view" id="view-settings">
+          <div class="welcome-header">
+            <h1 class="welcome-title">Settings</h1>
+            <p class="welcome-subtitle">Configure viewer preferences, picture quality, mouse cursor, and security</p>
+          </div>
+
+          <div class="settings-layout">
+            <!-- Group 1: Display & Quality -->
+            <div class="settings-card">
+              <h3 class="settings-group-header">Display & Picture Quality</h3>
+              
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Scaling Mode</div>
+                  <div class="setting-desc">How the remote desktop fits inside the viewer window</div>
+                </div>
+                <select class="setting-select" id="cfg-scaling">
+                  <option value="fit">Scale to fit window (Proportional)</option>
+                  <option value="stretch">Stretch to fill window (Edge-to-edge)</option>
+                  <option value="200%">200% Zoom (2x Scale)</option>
+                  <option value="300%">300% Zoom (3x Scale)</option>
+                  <option value="100%">100% Original size (1:1 Pixel-perfect)</option>
+                </select>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Picture Quality</div>
+                  <div class="setting-desc">RFB encoding and compression mode</div>
+                </div>
+                <select class="setting-select" id="cfg-quality">
+                  <option value="auto">Auto (Adaptive LAN Performance)</option>
+                  <option value="high">High (Raw 24-bit RGB888 Lossless)</option>
+                  <option value="medium">Medium (Hextile Fast Compression)</option>
+                  <option value="low">Low (Fast Updates / Reduced Palette)</option>
+                </select>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Target Refresh Rate (Hz / FPS)</div>
+                  <div class="setting-desc">Streaming frame rate requested from the remote desktop</div>
+                </div>
+                <select class="setting-select" id="cfg-refresh-rate">
+                  <option value="60">60 Hz (Recommended - Ultra Smooth 60 FPS)</option>
+                  <option value="120">120 Hz (Maximum - Ultra High Refresh)</option>
+                  <option value="30">30 Hz (Standard 30 FPS)</option>
+                  <option value="15">15 Hz (Low Bandwidth / Battery Saver)</option>
+                </select>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Virtual Desktop Default Resolution (:1)</div>
+                  <div class="setting-desc">Geometry used when creating new virtual desktops via SSH</div>
+                </div>
+                <select class="setting-select" id="cfg-virtual-resolution">
+                  <option value="1920x1080">1920 x 1080 (1080p Full HD)</option>
+                  <option value="1600x900">1600 x 900 (HD+)</option>
+                  <option value="1366x768">1366 x 768 (Standard Laptop)</option>
+                  <option value="1280x720" selected>1280 x 720 (720p HD - Recommended)</option>
+                  <option value="1024x768">1024 x 768 (XGA 4:3)</option>
+                  <option value="800x600">800 x 600 (SVGA)</option>
+                </select>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Remote Desktop Display Resolution</div>
+                  <div class="setting-desc">Server display framebuffer resolution</div>
+                </div>
+                <select class="setting-select" id="cfg-resolution">
+                  <option value="auto">Auto / Server Default (Current)</option>
+                  <option value="480x320">480 x 320 (Raspberry Pi LCD)</option>
+                  <option value="800x600">800 x 600 (SVGA)</option>
+                  <option value="1024x768">1024 x 768 (XGA)</option>
+                  <option value="1280x720">1280 x 720 (720p HD)</option>
+                  <option value="1920x1080">1920 x 1080 (1080p Full HD)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Group 2: Mouse & Input -->
+            <div class="settings-card">
+              <h3 class="settings-group-header">Mouse & Keyboard Input</h3>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Mouse Cursor Mode</div>
+                  <div class="setting-desc">Choose cursor pointer appearance over the remote session</div>
+                </div>
+                <select class="setting-select" id="cfg-cursor">
+                  <option value="local">Local Mouse Arrow Pointer (Recommended)</option>
+                  <option value="remote-only">Remote Cursor Only (No Dual Cursor)</option>
+                  <option value="dot">Sleek Circular Dot</option>
+                </select>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">View-Only Mode</div>
+                  <div class="setting-desc">Observe the remote screen without sending mouse clicks or keystrokes</div>
+                </div>
+                <input type="checkbox" id="cfg-view-only">
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Pass Special Key Combos</div>
+                  <div class="setting-desc">Forward Windows key, Alt+Tab, and function keys to the remote host</div>
+                </div>
+                <input type="checkbox" id="cfg-special-keys" checked>
+              </div>
+            </div>
+
+            <!-- Group 3: Security & Saved Passwords -->
+            <div class="settings-card">
+              <h3 class="settings-group-header">Security & Saved Credentials</h3>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Security Transport</div>
+                  <div class="setting-desc">Encryption negotiated with remote VNC Server</div>
+                </div>
+                <span class="security-badge">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  AlwaysOn (RA2 RSA-2048 / AES-EAX)
+                </span>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Remember Passwords (Auto-Connect)</div>
+                  <div class="setting-desc">Automatically authenticate saved connections without prompting each time</div>
+                </div>
+                <input type="checkbox" id="cfg-remember-passwords" checked>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Manage Saved Credentials</div>
+                  <div class="setting-desc">Remove all stored passwords from local storage</div>
+                </div>
+                <button class="btn btn-outline" id="btn-clear-storage" style="color: var(--danger-red); border-color: rgba(255,77,77,0.3);">
+                  Clear Stored Passwords
+                </button>
+              </div>
+            </div>
+
+            <!-- Group 4: Network & Discovery -->
+            <div class="settings-card">
+              <h3 class="settings-group-header">Network Preferences</h3>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Default RFB Port</div>
+                  <div class="setting-desc">Standard port used when not specified in connection string</div>
+                </div>
+                <input type="number" class="setting-input" id="cfg-port" value="5900" style="width: 80px;">
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Local LAN Discovery (mDNS)</div>
+                  <div class="setting-desc">Listen for _rfb._tcp broadcasts from LAN servers</div>
+                </div>
+                <input type="checkbox" id="cfg-mdns" checked>
+              </div>
+
+              <div class="setting-row">
+                <div class="setting-info">
+                  <div class="setting-name">Network Operation Mode</div>
+                  <div class="setting-desc">Strict LAN-only. All vendor cloud servers and external telemetry are permanently blocked.</div>
+                </div>
+                <span class="offline-badge">
+                  <span class="status-dot"></span>
+                  LAN Only (Offline)
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add / Edit Device Modal -->
+  <div class="modal-backdrop" id="device-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8BA8FF" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+        </div>
+        <div>
+          <h3 class="modal-title" id="device-modal-title">Add Saved Device</h3>
+          <p class="modal-subtitle">Save a local network computer for instant 1-click access</p>
+        </div>
+      </div>
+
+      <form id="device-form">
+        <div class="form-group">
+          <label class="form-label" for="dev-name">Device Name</label>
+          <input type="text" class="form-input" id="dev-name" placeholder="e.g. Raspberry Pi 4" required autocomplete="off">
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group" style="flex: 2;">
+            <label class="form-label" for="dev-host">IP Address / Hostname</label>
+            <input type="text" class="form-input" id="dev-host" placeholder="10.32.139.180" required autocomplete="off">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label" for="dev-port">Port</label>
+            <input type="number" class="form-input" id="dev-port" value="5900" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="dev-username">Username</label>
+          <input type="text" class="form-input" id="dev-username" placeholder="pi" value="pi" autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="dev-password">Password (Stored for 1-Click Auto-Connect)</label>
+          <input type="password" class="form-input" id="dev-password" placeholder="Enter password to connect without prompts">
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="btn-device-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary-small" id="btn-device-save">Save Device</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- RVConnect Secure Authentication Modal -->
+  <div class="modal-backdrop" id="auth-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8BA8FF" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <div>
+          <h3 class="modal-title">Authentication</h3>
+          <p class="modal-subtitle">Authentication is required to connect to <span id="auth-target-host">server</span></p>
+        </div>
+      </div>
+
+      <form id="auth-form">
+        <div class="form-group" id="group-username">
+          <label class="form-label" for="auth-username">Username</label>
+          <input type="text" class="form-input" id="auth-username" placeholder="Enter username (Linux user ID)" autocomplete="username" spellcheck="false" value="pi">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="auth-password">Password</label>
+          <div class="password-wrapper">
+            <input type="password" class="form-input" id="auth-password" placeholder="Enter password" autocomplete="current-password">
+            <button type="button" class="btn-toggle-pass" id="btn-toggle-pass" title="Show/Hide Password">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group-checkbox">
+          <label class="checkbox-label">
+            <input type="checkbox" id="auth-remember" checked>
+            <span class="custom-check"></span>
+            Remember password &amp; auto-connect next time
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="btn-auth-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary-small" id="btn-auth-submit">OK</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Remote Desktop Viewport (Shown when connected) -->
+  <div class="remote-viewport" id="remote-viewport">
+    <!-- Floating Quick Toolbar -->
+    <div class="remote-toolbar" id="remote-toolbar">
+      <div class="toolbar-drag-handle" id="toolbar-drag-handle" title="Click & Drag to move dock anywhere">:::</div>
+      <div class="toolbar-info">
+        <span class="remote-name" id="toolbar-remote-name">raspberrypi</span>
+        <span class="remote-res" id="toolbar-remote-res">480x320</span>
+      </div>
+      <div class="toolbar-actions">
+        <button class="tool-btn" id="btn-tool-cad" title="Send Ctrl+Alt+Del">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="7" y1="8" x2="17" y2="8"></line><line x1="7" y1="12" x2="17" y2="12"></line><line x1="7" y1="16" x2="13" y2="16"></line></svg>
+          <span>CAD</span>
+        </button>
+        <button class="tool-btn" id="btn-tool-cursor" title="Toggle Cursor Mode (Remote Cursor Only vs Local Pointer)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path></svg>
+          <span id="label-tool-cursor">Remote Pointer</span>
+        </button>
+        <button class="tool-btn" id="btn-tool-scale" title="Toggle Scaling (Fit / 100% / Stretch)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+          <span id="label-tool-scale">Fit</span>
+        </button>
+        <button class="tool-btn" id="btn-tool-fps" title="Toggle Target Refresh Rate (60Hz / 120Hz / 30Hz)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+          <span id="label-tool-fps">60 Hz</span>
+        </button>
+        <button class="tool-btn" id="btn-tool-virtual" title="Switch to High-Speed 60 FPS Virtual Desktop (:1) via SSH">
+          <span style="color:#34D399; font-weight:700;">⚡ :1 Virtual</span>
+        </button>
+        <button class="tool-btn" id="btn-tool-fullscreen" title="Toggle Fullscreen (F11)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>
+        </button>
+        <button class="tool-btn btn-disconnect" id="btn-tool-disconnect" title="Disconnect Session">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Interactive Framebuffer Canvas -->
+    <div class="canvas-container" id="canvas-container">
+      <canvas id="vnc-canvas" class="cursor-local" tabindex="0"></canvas>
+    </div>
+  </div>
+
+  <!-- Notification Banner -->
+  <div class="notification-banner" id="notification-banner"></div>
+
+  <script src="tauri-bridge.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
