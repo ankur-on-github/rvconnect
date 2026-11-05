@@ -149,3 +149,4 @@ This project is licensed under the [MIT License](LICENSE).
 
 *All product names, trademarks, and registered trademarks—including **RealVNC®**, **VNC®**, **RFB®**, and **Raspberry Pi®**—are the property of their respective owners. Company, product, and service names used in this software and documentation are for identification and technical compatibility purposes only (nominative fair use). Use of these names, trademarks, and brands does not imply endorsement.*
 
+
