@@ -46,10 +46,6 @@ function getSavedPassword(host) {
     const clean = host.split(':')[0].trim();
     if (map[clean]) return map[clean];
     if (map[host]) return map[host];
-    // Default pre-seeded credentials for target Raspberry Pi
-    if (clean === '10.32.139.180' || clean.toLowerCase() === 'raspberrypi') {
-      return { username: 'pi', password: 'raspberry' };
-    }
     return null;
   } catch (e) {
     return null;
@@ -62,7 +58,7 @@ function storeSavedPassword(host, username, password) {
     const raw = localStorage.getItem(STORAGE_PASSWORDS) || localStorage.getItem('realvnc_saved_passwords');
     const map = raw ? JSON.parse(raw) : {};
     const clean = host.split(':')[0].trim();
-    const entry = { username: username || 'pi', password: password || '' };
+    const entry = { username: username || '', password: password || '' };
     map[clean] = entry;
     map[host] = entry;
     localStorage.setItem(STORAGE_PASSWORDS, JSON.stringify(map));
@@ -80,23 +76,10 @@ function loadSavedDevices() {
     const raw = localStorage.getItem(STORAGE_DEVICES) || localStorage.getItem('realvnc_saved_devices');
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch (e) {}
-
-  // Seed default target: Raspberry Pi
-  const seed = [
-    {
-      id: '10.32.139.180',
-      name: 'raspberrypi',
-      host: '10.32.139.180',
-      port: 5900,
-      username: 'pi',
-      lastConnected: Date.now()
-    }
-  ];
-  saveSavedDevices(seed);
-  return seed;
+  return [];
 }
 
 function saveSavedDevices(devices) {
@@ -379,19 +362,31 @@ window.connectToSavedDevice = function(id) {
 };
 
 window.createVirtualDesktop = async function(id) {
-  const dev = savedDevices.find(d => d.id === id) || { host: '10.32.139.180', username: 'pi' };
-  const host = dev.host || '10.32.139.180';
-  const savedCred = getSavedPassword(host) || { username: 'pi', password: 'raspberry' };
-  const targetRes = appSettings.virtualResolution || '1280x720';
+  const dev = savedDevices.find(d => d.id === id);
+  if (!dev || !dev.host) {
+    showNotification('Device not found. Please add device first.');
+    return;
+  }
+  const host = dev.host;
+  const savedCred = getSavedPassword(host) || {};
+  const username = dev.username || savedCred.username || 'pi';
+  const password = savedCred.password || '';
 
+  if (!password) {
+    showNotification(`Password required to SSH into ${host}. Please edit device to set password.`);
+    openAddDeviceModal(id);
+    return;
+  }
+
+  const targetRes = appSettings.virtualResolution || '1280x720';
   showNotification(`🚀 SSH connecting to ${host} to start Virtual Desktop (:1) at ${targetRes}...`);
 
   try {
     const res = await window.api.startVirtualDesktop({
       host,
       port: 22,
-      username: savedCred.username || 'pi',
-      password: savedCred.password || 'raspberry',
+      username,
+      password,
       display: 1,
       geometry: targetRes
     });
@@ -417,9 +412,15 @@ window.createVirtualDesktop = async function(id) {
 };
 
 window.connectVirtualDesktop = async function(id) {
-  const dev = savedDevices.find(d => d.id === id) || { host: '10.32.139.180', username: 'pi' };
-  const host = dev.host || '10.32.139.180';
-  const savedCred = getSavedPassword(host) || { username: 'pi', password: 'raspberry' };
+  const dev = savedDevices.find(d => d.id === id);
+  if (!dev || !dev.host) {
+    showNotification('Device not found.');
+    return;
+  }
+  const host = dev.host;
+  const savedCred = getSavedPassword(host) || {};
+  const username = dev.username || savedCred.username || 'pi';
+  const password = savedCred.password || '';
 
   showNotification(`🔍 Verifying Virtual Desktop on ${host}:5901...`);
   const isOnline = await window.api.probeDevice(host, 5901);
@@ -430,13 +431,15 @@ window.connectVirtualDesktop = async function(id) {
   }
 
   // Ensure remote X11 root cursor is left_ptr arrow instead of cross
-  window.api.fixCursor({
-    host,
-    port: 22,
-    username: savedCred.username || 'pi',
-    password: savedCred.password || 'raspberry',
-    display: 1
-  }).catch(() => {});
+  if (password) {
+    window.api.fixCursor({
+      host,
+      port: 22,
+      username,
+      password,
+      display: 1
+    }).catch(() => {});
+  }
 
   showNotification(`🔌 Connecting to Virtual Desktop on ${host}:5901...`);
   directInput.value = `${host}:5901`;
@@ -444,9 +447,17 @@ window.connectVirtualDesktop = async function(id) {
 };
 
 window.killVirtualDesktopAction = async function(id) {
-  const dev = savedDevices.find(d => d.id === id) || { host: '10.32.139.180', username: 'pi' };
-  const host = dev.host || '10.32.139.180';
-  const savedCred = getSavedPassword(host) || { username: 'pi', password: 'raspberry' };
+  const dev = savedDevices.find(d => d.id === id);
+  if (!dev || !dev.host) return;
+  const host = dev.host;
+  const savedCred = getSavedPassword(host) || {};
+  const username = dev.username || savedCred.username || 'pi';
+  const password = savedCred.password || '';
+
+  if (!password) {
+    showNotification(`Password required to connect via SSH to ${host}.`);
+    return;
+  }
 
   showNotification(`🛑 SSH connecting to ${host} to close & terminate Virtual Desktop (:1)...`);
 
@@ -454,8 +465,8 @@ window.killVirtualDesktopAction = async function(id) {
     await window.api.killVirtualDesktop({
       host,
       port: 22,
-      username: savedCred.username || 'pi',
-      password: savedCred.password || 'raspberry',
+      username,
+      password,
       display: 1
     });
 
@@ -825,17 +836,24 @@ if (btnToolFps) {
 
 if (btnToolVirtual) {
   btnToolVirtual.addEventListener('click', async () => {
-    const rawHost = currentConnectingHost || '10.32.139.180';
+    if (!currentConnectingHost) return;
+    const rawHost = currentConnectingHost;
     const host = rawHost.includes(':') ? rawHost.split(':')[0] : rawHost;
+    const savedCred = getSavedPassword(host) || {};
+    const username = savedCred.username || 'pi';
+    const password = savedCred.password || '';
+    if (!password) {
+      showNotification(`Password required to SSH into ${host}. Please save device credentials first.`);
+      return;
+    }
     const targetRes = appSettings.virtualResolution || '1280x720';
     showNotification(`⚡ Starting Virtual Desktop (:1) at ${targetRes} on ${host} via SSH...`);
     try {
-      const savedCred = getSavedPassword(host) || { username: 'pi', password: 'raspberry' };
       await window.api.startVirtualDesktop({
         host,
         port: 22,
-        username: savedCred.username || 'pi',
-        password: savedCred.password || 'raspberry',
+        username,
+        password,
         display: 1,
         geometry: targetRes
       });
@@ -844,7 +862,7 @@ if (btnToolVirtual) {
         initiateConnection(`${host}:5901`);
       }, 400);
     } catch (err) {
-      showNotification(`Virtual Desktop error: ${err.message}`);
+      showNotification(`Virtual Desktop error: ${err.message || err}`);
     }
   });
 }
@@ -1053,15 +1071,19 @@ window.api.onConnected(({ width, height, name }) => {
 
   // If connected to Virtual Desktop (:1 / 5901), ensure root cursor is left_ptr arrow
   if (currentConnectingPort === 5901 || (currentConnectingHost && currentConnectingHost.includes(':5901'))) {
-    const rawHost = currentConnectingHost ? currentConnectingHost.split(':')[0] : '10.32.139.180';
-    const savedCred = getSavedPassword(rawHost) || { username: 'pi', password: 'raspberry' };
-    window.api.fixCursor({
-      host: rawHost,
-      port: 22,
-      username: savedCred.username || 'pi',
-      password: savedCred.password || 'raspberry',
-      display: 1
-    }).catch(() => {});
+    const rawHost = currentConnectingHost ? currentConnectingHost.split(':')[0] : '';
+    if (rawHost) {
+      const savedCred = getSavedPassword(rawHost) || {};
+      if (savedCred.password) {
+        window.api.fixCursor({
+          host: rawHost,
+          port: 22,
+          username: savedCred.username || 'pi',
+          password: savedCred.password,
+          display: 1
+        }).catch(() => {});
+      }
+    }
   }
 
   // Update or record in saved devices
@@ -1187,6 +1209,9 @@ const discoveredMap = new Map();
 
 window.api.onDeviceDiscovered((dev) => {
   if (discoveredMap.has(dev.ip)) return;
+  if (discoveredMap.size === 0 && discoveredGrid) {
+    discoveredGrid.innerHTML = '';
+  }
   discoveredMap.set(dev.ip, dev);
 
   if (discoveredGrid) {
@@ -1219,14 +1244,27 @@ window.api.onDeviceDiscovered((dev) => {
 });
 
 const btnRefreshDev = document.getElementById('btn-refresh-devices');
-if (btnRefreshDev) {
-  btnRefreshDev.addEventListener('click', () => {
-    if (discoveredGrid) discoveredGrid.innerHTML = '';
-    discoveredMap.clear();
-    window.api.rescanLan();
-    showNotification('Scanning LAN for VNC / RFB Servers...');
-  });
+async function executeLanScan() {
+  if (discoveredGrid) {
+    discoveredGrid.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; grid-column: 1 / -1; padding: 12px 0;">Scanning subnet for VNC / RFB servers...</div>';
+  }
+  discoveredMap.clear();
+  showNotification('Scanning LAN for VNC / RFB Servers...');
+  await window.api.rescanLan();
+  if (discoveredMap.size === 0 && discoveredGrid) {
+    discoveredGrid.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; grid-column: 1 / -1; padding: 12px 0;">No active VNC servers found on local subnet. Click "Scan Local Network" to search again.</div>';
+    showNotification('LAN scan complete: No active VNC servers detected on local subnet.');
+  } else {
+    showNotification(`LAN scan complete: Found ${discoveredMap.size} device(s) broadcasting VNC.`);
+  }
 }
+
+if (btnRefreshDev) {
+  btnRefreshDev.addEventListener('click', executeLanScan);
+}
+
+// Auto-scan local subnet on startup
+setTimeout(executeLanScan, 600);
 
 // -------------------------------------------------------------
 // Settings View Handlers

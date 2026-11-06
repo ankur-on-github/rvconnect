@@ -256,15 +256,11 @@
     rescanLan: async () => {
       const t = getTauri();
       if (t && t.invoke) {
-        // Real active network probe: only announce if Pi actually responds!
-        const isOnline = await t.invoke('probe_device', { host: '10.32.139.180', port: 5900 }).catch(() => false);
-        if (isOnline) {
-          listeners.deviceDiscovered.forEach(cb => cb({
-            name: 'raspberrypi',
-            host: '10.32.139.180',
-            port: 5900,
-            addresses: ['10.32.139.180']
-          }));
+        const devices = await t.invoke('scan_network').catch(() => []);
+        if (Array.isArray(devices)) {
+          devices.forEach(dev => {
+            listeners.deviceDiscovered.forEach(cb => cb(dev));
+          });
         }
       }
       return Promise.resolve();
@@ -274,7 +270,7 @@
       const t = getTauri();
       if (t && t.invoke) {
         return t.invoke('probe_device', {
-          host: host || '10.32.139.180',
+          host: (host || '').trim(),
           port: parseInt(port, 10) || 5900
         });
       }
@@ -285,9 +281,9 @@
       const t = getTauri();
       if (t && t.invoke) {
         return t.invoke('start_virtual_desktop', {
-          host: opts.host || '10.32.139.180',
-          username: opts.username || 'pi',
-          password: opts.password || 'raspberry',
+          host: (opts.host || '').trim(),
+          username: (opts.username || '').trim(),
+          password: opts.password || '',
           display: parseInt(opts.display, 10) || 1,
           geometry: opts.geometry || '1280x720'
         });
@@ -299,9 +295,9 @@
       const t = getTauri();
       if (t && t.invoke) {
         return t.invoke('kill_virtual_desktop', {
-          host: opts.host || '10.32.139.180',
-          username: opts.username || 'pi',
-          password: opts.password || 'raspberry',
+          host: (opts.host || '').trim(),
+          username: (opts.username || '').trim(),
+          password: opts.password || '',
           display: parseInt(opts.display, 10) || 1
         });
       }
@@ -312,9 +308,9 @@
       const t = getTauri();
       if (t && t.invoke) {
         return t.invoke('fix_cursor', {
-          host: opts.host || '10.32.139.180',
-          username: opts.username || 'pi',
-          password: opts.password || 'raspberry',
+          host: (opts.host || '').trim(),
+          username: (opts.username || '').trim(),
+          password: opts.password || '',
           display: parseInt(opts.display, 10) || 1
         });
       }
@@ -331,20 +327,6 @@
     onResize: (cb) => listeners.resize.push(cb),
     onDeviceDiscovered: (cb) => {
       listeners.deviceDiscovered.push(cb);
-      // Only do real probe, never announce fake devices!
-      const t = getTauri();
-      if (t && t.invoke) {
-        t.invoke('probe_device', { host: '10.32.139.180', port: 5900 }).then(online => {
-          if (online) {
-            cb({
-              name: 'raspberrypi',
-              host: '10.32.139.180',
-              port: 5900,
-              addresses: ['10.32.139.180']
-            });
-          }
-        }).catch(() => {});
-      }
     },
     onClipboardSync: (cb) => listeners.clipboardSync.push(cb),
     onFullscreenChange: (cb) => listeners.fullscreenChange.push(cb)

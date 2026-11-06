@@ -23,6 +23,10 @@ wss.on('connection', (ws) => {
     }
   });
 
+  ws.on('error', (err) => {
+    console.log('[Engine] Client socket error:', err.message);
+  });
+
   ws.on('close', () => {
     console.log('[Engine] Frontend client disconnected');
     if (activeWs === ws) activeWs = null;

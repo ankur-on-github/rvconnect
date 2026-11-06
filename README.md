@@ -10,7 +10,7 @@
 
 **A modern, lightweight, high-performance remote desktop client tailored for Raspberry Pi and standard RFB/VNC servers.**
 
-*An open-source alternative to commercial VNC Connect viewers — engineered with Rust for blazing-fast 60 FPS zero-copy display streaming, native SSH virtual desktop automation, and minimal resource footprint (<25 MB).*
+*An open-source alternative to commercial VNC Connect viewers — engineered with Rust for blazing-fast 60 FPS zero-copy display streaming, native SSH virtual desktop automation, and minimal resource footprint.*
 
 </div>
 
@@ -44,14 +44,14 @@ Navigate to **Interface Options** → **VNC** → Select **Yes** to enable.
 - **Console Mode (`:0` on port 5900)**: Mirrors the physical display attached to the Raspberry Pi (HDMI monitor or LCD touch screen).
 - **Virtual Desktop Mode (`:1` on port 5901)**: Creates an independent, high-speed virtual desktop at your chosen resolution (e.g. 1280×720 or 1920×1080) rendered entirely in memory.
 
-When connecting via **⚡ Connect :1** or **⚡ Create :1**, RVConnect communicates with the Raspberry Pi over SSH (port 22) using your Linux credentials (`pi` / password) to verify or launch the virtual desktop automatically.
+When connecting via **⚡ Connect :1** or **⚡ Create :1**, RVConnect communicates with the Raspberry Pi over SSH (port 22) using your system credentials to verify or launch the virtual desktop automatically.
 
 ---
 
 ## 🚀 Quick Start
 
 ### 1-Click Windows Installer (Recommended)
-1. Download **`RVConnect_Viewer_v1.0.0_Setup.exe`** from the [Releases](https://github.com/ankur-on-github/rvconnect/releases) section.
+1. Download **`RVConnect_Viewer_v1.0.0_Setup.exe`** (~31 MB) from the [Releases](https://github.com/ankur-on-github/rvconnect/releases) section.
 2. Run the installer wizard (installs to your user profile without requiring administrator privileges).
 3. Check the optional **Create a desktop shortcut** box and click **Install**.
 4. Launch **RVConnect Viewer** directly from your Start Menu or Desktop!
@@ -59,7 +59,7 @@ When connecting via **⚡ Connect :1** or **⚡ Create :1**, RVConnect communica
 ### Running Standalone
 1. Download or clone this repository.
 2. Launch `RVConnect Viewer.exe` (ensure `WebView2Loader.dll` is in the same folder).
-3. In the **Direct LAN Connection** box, enter your Raspberry Pi's IP address (e.g., `10.32.139.180` or `raspberrypi.local`).
+3. In the **Direct LAN Connection** box, enter your Raspberry Pi's IP address (e.g., `192.168.1.50` or `raspberrypi.local`).
 4. Click the arrow button (or press `Enter`) to connect to the console screen (`:0`), or use the **⚡ Connect :1** button on the device card for an automated virtual desktop session.
 
 ---
@@ -84,7 +84,7 @@ When connecting via **⚡ Connect :1** or **⚡ Create :1**, RVConnect communica
    ```powershell
    .\build-installer.ps1
    ```
-   *This compiles the optimized release binary, strips symbols down to ~19 MB, and packages the complete standalone installer (`dist\RVConnect_Viewer_v1.0.0_Setup.exe`, ~6.5 MB) automatically.*
+   *This compiles the optimized release binary, strips symbols, and packages the complete standalone installer (`dist\RVConnect_Viewer_v1.0.0_Setup.exe`, ~31 MB self-contained with bundled engine runtime) automatically.*
 
 3. **Or build manually via Cargo:**
    ```bash

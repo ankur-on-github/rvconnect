@@ -47,14 +47,89 @@ fn window_control(window: Window, action: String) {
     }
 }
 
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct DiscoveredDevice {
+    pub name: String,
+    pub host: String,
+    pub ip: String,
+    pub port: u16,
+    pub addresses: Vec<String>,
+}
+
 #[tauri::command]
 fn probe_device(host: String, port: u16) -> bool {
-    let addr = format!("{}:{}", host, port);
-    if let Ok(socket_addr) = addr.parse() {
-        TcpStream::connect_timeout(&socket_addr, Duration::from_millis(600)).is_ok()
-    } else {
-        false
+    use std::net::ToSocketAddrs;
+    let target = format!("{}:{}", host.trim(), port);
+    if let Ok(mut addrs) = target.to_socket_addrs() {
+        if let Some(socket_addr) = addrs.next() {
+            return TcpStream::connect_timeout(&socket_addr, Duration::from_millis(800)).is_ok();
+        }
     }
+    false
+}
+
+#[tauri::command]
+async fn scan_network() -> Vec<DiscoveredDevice> {
+    use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, UdpSocket};
+    use tokio::net::TcpStream;
+    use tokio::time::{timeout, Duration};
+
+    let local_ip = (|| {
+        let s = UdpSocket::bind("0.0.0.0:0").ok()?;
+        s.connect("8.8.8.8:80").ok()?;
+        match s.local_addr().ok()?.ip() {
+            std::net::IpAddr::V4(ip) => Some(ip),
+            _ => None,
+        }
+    })();
+
+    let local_ip = match local_ip {
+        Some(ip) => ip,
+        None => return Vec::new(),
+    };
+
+    let octets = local_ip.octets();
+    let mut tasks = Vec::with_capacity(254);
+
+    for d in 1..255 {
+        let target_ip = Ipv4Addr::new(octets[0], octets[1], octets[2], d);
+
+        tasks.push(tokio::spawn(async move {
+            let addr_5900 = SocketAddr::V4(SocketAddrV4::new(target_ip, 5900));
+            if let Ok(Ok(_)) = timeout(Duration::from_millis(350), TcpStream::connect(addr_5900)).await {
+                let ip_str = target_ip.to_string();
+                return Some(DiscoveredDevice {
+                    name: format!("VNC Server ({})", ip_str),
+                    host: ip_str.clone(),
+                    ip: ip_str.clone(),
+                    port: 5900,
+                    addresses: vec![ip_str],
+                });
+            }
+
+            let addr_5901 = SocketAddr::V4(SocketAddrV4::new(target_ip, 5901));
+            if let Ok(Ok(_)) = timeout(Duration::from_millis(250), TcpStream::connect(addr_5901)).await {
+                let ip_str = target_ip.to_string();
+                return Some(DiscoveredDevice {
+                    name: format!("Virtual Desktop ({})", ip_str),
+                    host: ip_str.clone(),
+                    ip: ip_str.clone(),
+                    port: 5901,
+                    addresses: vec![ip_str],
+                });
+            }
+
+            None
+        }));
+    }
+
+    let mut discovered = Vec::new();
+    for t in tasks {
+        if let Ok(Some(dev)) = t.await {
+            discovered.push(dev);
+        }
+    }
+    discovered
 }
 
 #[tauri::command]
@@ -111,6 +186,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             window_control,
             probe_device,
+            scan_network,
             start_virtual_desktop,
             kill_virtual_desktop,
             fix_cursor,

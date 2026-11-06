@@ -20,6 +20,20 @@ const ENC_DESKTOP_SIZE = -223;
 const ENC_LAST_RECT = -224;
 const ENC_CURSOR = -239;
 
+function readColor32(buffer, offset, isBgr) {
+  let r, g, b;
+  if (isBgr) {
+    b = buffer[offset];
+    g = buffer[offset + 1];
+    r = buffer[offset + 2];
+  } else {
+    r = buffer[offset];
+    g = buffer[offset + 1];
+    b = buffer[offset + 2];
+  }
+  return ((0xFF << 24) | (b << 16) | (g << 8) | r) >>> 0;
+}
+
 function getHextileRectLength(buf, startOffset, rw, rh) {
   let off = startOffset;
   for (let ty = 0; ty < rh; ty += 16) {
@@ -80,6 +94,10 @@ class RfbClient extends EventEmitter {
     this.lastFrameTime = 0;
     this.lastButtonMask = 0;
     this.expectedRects = 0;
+    this.isBgr = false;
+    this.serverRedShift = 0;
+    this.serverGreenShift = 8;
+    this.serverBlueShift = 16;
   }
 
   connect(host, port = 5900) {
@@ -91,6 +109,7 @@ class RfbClient extends EventEmitter {
     this.ra2Session = null;
     this.pendingUpdate = false;
     this.expectedRects = 0;
+    this.isBgr = false;
 
     this.socket = net.createConnection({ host, port }, () => {
       this.socket.setNoDelay(true);
@@ -368,6 +387,13 @@ class RfbClient extends EventEmitter {
           if (this.buffer.length < 24) return;
           const w = this.buffer.readUInt16BE(0);
           const h = this.buffer.readUInt16BE(2);
+          const redShift = this.buffer[14];
+          const greenShift = this.buffer[15];
+          const blueShift = this.buffer[16];
+          this.serverRedShift = redShift;
+          this.serverGreenShift = greenShift;
+          this.serverBlueShift = blueShift;
+          this.isBgr = (blueShift === 0 && redShift === 16);
           const nameLen = this.buffer.readUInt32BE(20);
 
           if (this.buffer.length < 24 + nameLen) return;
@@ -630,9 +656,18 @@ class RfbClient extends EventEmitter {
           const pixelData = this.buffer.slice(12, 12 + byteLen);
           this.buffer = this.buffer.slice(12 + byteLen);
 
-          // Guarantee alpha is 0xFF for all pixels in this rectangle
-          for (let p = 3; p < pixelData.length; p += 4) {
-            pixelData[p] = 0xFF;
+          // Guarantee alpha is 0xFF and swap BGR to RGBA if server sends BGR
+          if (this.isBgr) {
+            for (let p = 0; p < pixelData.length; p += 4) {
+              const b = pixelData[p];
+              pixelData[p] = pixelData[p + 2];
+              pixelData[p + 2] = b;
+              pixelData[p + 3] = 0xFF;
+            }
+          } else {
+            for (let p = 3; p < pixelData.length; p += 4) {
+              pixelData[p] = 0xFF;
+            }
           }
 
           if (this.framebuffer) {
@@ -707,8 +742,17 @@ class RfbClient extends EventEmitter {
                   const dst = ((ry + ty + y) * this.width + (rx + tx)) * 4;
                   if (dst + tw * 4 <= this.framebuffer.length) {
                     this.buffer.copy(this.framebuffer, dst, src, src + tw * 4);
-                    for (let p = dst + 3; p < dst + tw * 4; p += 4) {
-                      this.framebuffer[p] = 0xFF;
+                    if (this.isBgr) {
+                      for (let p = dst; p < dst + tw * 4; p += 4) {
+                        const b = this.framebuffer[p];
+                        this.framebuffer[p] = this.framebuffer[p + 2];
+                        this.framebuffer[p + 2] = b;
+                        this.framebuffer[p + 3] = 0xFF;
+                      }
+                    } else {
+                      for (let p = dst + 3; p < dst + tw * 4; p += 4) {
+                        this.framebuffer[p] = 0xFF;
+                      }
                     }
                   }
                 }
@@ -717,7 +761,7 @@ class RfbClient extends EventEmitter {
               }
 
               if (subenc & 2) {
-                curBg = (this.buffer.readUInt32LE(offset) & 0x00FFFFFF) | 0xFF000000;
+                curBg = readColor32(this.buffer, offset, this.isBgr);
                 offset += 4;
               }
 
@@ -727,7 +771,7 @@ class RfbClient extends EventEmitter {
               }
 
               if (subenc & 4) {
-                curFg = (this.buffer.readUInt32LE(offset) & 0x00FFFFFF) | 0xFF000000;
+                curFg = readColor32(this.buffer, offset, this.isBgr);
                 offset += 4;
               }
 
@@ -738,7 +782,7 @@ class RfbClient extends EventEmitter {
                 for (let s = 0; s < numSub; s++) {
                   let subColor = curFg;
                   if (colored) {
-                    subColor = (this.buffer.readUInt32LE(offset) & 0x00FFFFFF) | 0xFF000000;
+                    subColor = readColor32(this.buffer, offset, this.isBgr);
                     offset += 4;
                   }
                   const xy = this.buffer[offset++];
