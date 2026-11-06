@@ -34,13 +34,25 @@ impl EngineProcess {
             .filter(|p| p.exists())
             .unwrap_or_else(|| std::path::PathBuf::from("engine/server.js"));
 
-        let node_bin = if std::path::Path::new(r"C:\Program Files\nodejs\node.exe").exists() {
-            r"C:\Program Files\nodejs\node.exe"
+        let node_bin = if let Some(ref dir) = exe_dir {
+            let bundled_bin = dir.join("bin").join("node.exe");
+            let bundled_root = dir.join("node.exe");
+            if bundled_bin.exists() {
+                bundled_bin
+            } else if bundled_root.exists() {
+                bundled_root
+            } else if std::path::Path::new(r"C:\Program Files\nodejs\node.exe").exists() {
+                std::path::PathBuf::from(r"C:\Program Files\nodejs\node.exe")
+            } else {
+                std::path::PathBuf::from("node")
+            }
+        } else if std::path::Path::new(r"C:\Program Files\nodejs\node.exe").exists() {
+            std::path::PathBuf::from(r"C:\Program Files\nodejs\node.exe")
         } else {
-            "node"
+            std::path::PathBuf::from("node")
         };
 
-        let mut cmd = Command::new(node_bin);
+        let mut cmd = Command::new(&node_bin);
         cmd.arg(&script_path);
         if let Some(ref dir) = exe_dir {
             cmd.current_dir(dir);
@@ -57,7 +69,7 @@ impl EngineProcess {
         let spawn_res = cmd.spawn();
         let _ = std::fs::write(
             exe_dir.as_ref().map(|d| d.join("engine_spawn.log")).unwrap_or_else(|| std::path::PathBuf::from("engine_spawn.log")),
-            format!("node_bin: {}\nscript: {:?}\nres: {:?}", node_bin, script_path, spawn_res)
+            format!("node_bin: {:?}\nscript: {:?}\nres: {:?}", node_bin, script_path, spawn_res)
         );
 
         match spawn_res {

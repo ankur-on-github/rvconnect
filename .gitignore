@@ -1,6 +1,7 @@
 # Rust build artifacts
 target/
 dist/
+bin/
 **/*.rs.bk
 
 # Executables & Dynamic Libraries
